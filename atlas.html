@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=5">
+  <meta name="theme-color" content="#F4EEDF">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="ATLAS">
+  <meta name="description" content="Manual de produção do projeto ATLAS">
+  <title>ATLAS · Manual de Produção</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,500&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    :root {
+      --bg: #F4EEDF;
+      --ink: #2A211A;
+      --muted: #8B7E6D;
+      --border: #D9CFBE;
+      --accent: #B84A1E;
+    }
+
+    * { -webkit-tap-highlight-color: transparent; box-sizing: border-box; }
+
+    html, body {
+      margin: 0; padding: 0;
+      background: var(--bg);
+      color: var(--ink);
+      font-family: 'Fraunces', Georgia, serif;
+      font-feature-settings: "ss01", "ss02";
+      -webkit-font-smoothing: antialiased;
+      overscroll-behavior-y: contain;
+      min-height: 100vh;
+      min-height: 100dvh;
+    }
+
+    button {
+      touch-action: manipulation;
+      font-family: inherit;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    input, textarea {
+      font-size: 16px; /* prevent iOS zoom on focus */
+      font-family: inherit;
+    }
+
+    input:focus, textarea:focus { outline: none; }
+
+    .mono { font-family: 'IBM Plex Mono', ui-monospace, monospace; }
+
+    *::selection { background: rgba(184, 74, 30, 0.2); }
+
+    .loader {
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh; min-height: 100dvh;
+      font-family: 'IBM Plex Mono', monospace;
+      color: var(--muted); font-size: 12px; letter-spacing: 0.2em;
+    }
+
+    /* Pull-to-refresh prevention on iOS */
+    body { overscroll-behavior: none; }
+  </style>
+</head>
+<body>
+  <div id="root">
+    <div class="loader">A CARREGAR…</div>
+  </div>
+
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script type="text/babel" data-presets="react">
+    const { useState, useEffect, useRef } = React;
+
+    /* ═══════════════════════════════════════════ ICONS ═══ */
+    const Icon = ({ size = 14, strokeWidth = 2, children, ...rest }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24"
+        fill="none" stroke="currentColor" strokeWidth={strokeWidth}
+        strokeLinecap="round" strokeLinejoin="round" {...rest}>
+        {children}
+      </svg>
+    );
+    const CheckIcon = (p) => <Icon {...p}><path d="M20 6 9 17l-5-5" /></Icon>;
+    const PlusIcon = (p) => <Icon {...p}><path d="M5 12h14" /><path d="M12 5v14" /></Icon>;
+    const TrashIcon = (p) => (
+      <Icon {...p}>
+        <path d="M3 6h18" />
+        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+        <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+        <line x1="10" x2="10" y1="11" y2="17" />
+        <line x1="14" x2="14" y1="11" y2="17" />
+      </Icon>
+    );
+    const RotateIcon = (p) => (
+      <Icon {...p}>
+        <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+        <path d="M3 3v5h5" />
+      </Icon>
+    );
+    const ArrowUpIcon = (p) => <Icon {...p}><path d="m5 12 7-7 7 7" /><path d="M12 19V5" /></Icon>;
+    const ArrowDownIcon = (p) => <Icon {...p}><path d="M12 5v14" /><path d="m19 12-7 7-7-7" /></Icon>;
+    const ArrowRightIcon = (p) => <Icon {...p}><path d="M5 12h14" /><path d="m12 5 7 7-7 7" /></Icon>;
+    const DotsIcon = (p) => (
+      <Icon {...p}>
+        <circle cx="12" cy="12" r="1" />
+        <circle cx="19" cy="12" r="1" />
+        <circle cx="5" cy="12" r="1" />
+      </Icon>
+    );
+    const DownloadIcon = (p) => (
+      <Icon {...p}>
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+        <polyline points="7 10 12 15 17 10" />
+        <line x1="12" x2="12" y1="15" y2="3" />
+      </Icon>
+    );
+    const UploadIcon = (p) => (
+      <Icon {...p}>
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+        <polyline points="17 8 12 3 7 8" />
+        <line x1="12" x2="12" y1="3" y2="15" />
+      </Icon>
+    );
+
+    /* ═══════════════════════════════════════════ DATA & HELPERS ═══ */
+    const STORAGE_KEY = 'atlas-project-v2';
+
+    const uid = () => `id-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+    const toRoman = (num) => {
+      const map = [['M',1000],['CM',900],['D',500],['CD',400],['C',100],['XC',90],['L',50],['XL',40],['X',10],['IX',9],['V',5],['IV',4],['I',1]];
+      let n = num, result = '';
+      for (const [r, v] of map) while (n >= v) { result += r; n -= v; }
+      return result;
+    };
+
+    const INITIAL_DATA = {
+      title: 'ATLAS',
+      subtitle: 'Um manual de produção',
+      activities: [
+        'Construção — compras, montagem, testes, demo, evolução',
+        'Apresentação — diferentes públicos e facetas do projeto',
+      ],
+      events: [
+        {
+          id: 'evt-a', letter: 'A', name: 'ATLAS operacional', date: 'ASAP', note: '',
+          objectives: [
+            { id: 'obj-a1', code: 'A1', name: 'Comprar material', tasks: [
+              { id: uid(), text: 'LED flexível', done: false },
+              { id: uid(), text: 'ECG', done: false },
+              { id: uid(), text: 'Trança de cabelo', done: false },
+              { id: uid(), text: 'Budget — confirmar financiamento com Samuel', done: false },
+              { id: uid(), text: 'Marcar reunião com Samuel', done: false },
+            ]},
+            { id: 'obj-a2', code: 'A2', name: 'Montar instalação (depende de A1)', tasks: [
+              { id: uid(), text: 'Confirmar com o Daniel quando pode ajudar', done: false },
+              { id: uid(), text: 'Sugerir datas entre 30 Abril e 3 de Maio', done: false },
+              { id: uid(), text: 'Montagem solo', done: false },
+            ]},
+            { id: 'obj-a3', code: 'A3', name: 'Documentação — Rider técnico', tasks: [
+              { id: uid(), text: 'Sacar template', done: false },
+              { id: uid(), text: 'Ver exemplos', done: false },
+            ]},
+          ],
+        },
+        {
+          id: 'evt-b', letter: 'B', name: 'IJUP', date: '6 a 8 de Maio', note: '',
+          objectives: [
+            { id: 'obj-b1', code: 'B1', name: 'Timeline do evento', tasks: [
+              { id: uid(), text: 'Marcar reunião com a Filipa', done: true },
+              { id: uid(), text: 'Obter info sobre equipamento necessário', done: false },
+              { id: uid(), text: 'Confirmar montagem, horário de apresentação, pausas e desmontagem', done: false },
+              { id: uid(), text: 'Saber se o poster tem template', done: false },
+              { id: uid(), text: 'Apontar tudo no calendário', done: false },
+            ]},
+            { id: 'obj-b2', code: 'B2', name: 'Criar poster', tasks: [
+              { id: uid(), text: 'Rever conteúdo', done: false },
+              { id: uid(), text: 'Criar demo', done: false },
+              { id: uid(), text: 'Iterar', done: false },
+              { id: uid(), text: 'Ver exemplos (template?)', done: false },
+            ]},
+            { id: 'obj-b3', code: 'B3', name: 'Logística do evento', tasks: [
+              { id: uid(), text: 'Viagem ida e volta', done: false },
+              { id: uid(), text: 'Quem fica com o Caetano', done: false },
+              { id: uid(), text: 'Estadia', done: false },
+              { id: uid(), text: 'Comidas', done: false },
+            ]},
+          ],
+        },
+        {
+          id: 'evt-c', letter: 'C', name: 'Muddle', date: '19 e 20 de Maio', note: '',
+          objectives: [
+            { id: 'obj-c1', code: 'C1', name: 'Timeline do evento', tasks: [
+              { id: uid(), text: 'Marcar reunião com a Filipa', done: true },
+              { id: uid(), text: 'Saber sobre equipamento', done: false },
+              { id: uid(), text: 'Confirmar hora de apresentação', done: false },
+              { id: uid(), text: 'Decidir o que é essencial apresentar', done: false },
+            ]},
+            { id: 'obj-c2', code: 'C2', name: 'Criar apresentação', tasks: [
+              { id: uid(), text: 'Rever conteúdo', done: false },
+              { id: uid(), text: 'Criar demo', done: false },
+              { id: uid(), text: 'Iterar', done: false },
+              { id: uid(), text: 'Ver exemplos (template?)', done: false },
+            ]},
+            { id: 'obj-c3', code: 'C3', name: 'Logística do evento', tasks: [
+              { id: uid(), text: 'Viagem ida e volta', done: false },
+              { id: uid(), text: 'Quem fica com o Caetano', done: false },
+              { id: uid(), text: 'Estadia', done: false },
+              { id: uid(), text: 'Comidas', done: false },
+            ]},
+          ],
+        },
+        {
+          id: 'evt-d', letter: 'D', name: 'Serralves', date: '30 de Maio', note: '',
+          objectives: [
+            { id: 'obj-d1', code: 'D1', name: 'Timeline do evento', tasks: [
+              { id: uid(), text: 'Saber sobre equipamento e montagem', done: false },
+              { id: uid(), text: 'Confirmar horário de apresentação, pausas e desmontagem', done: false },
+            ]},
+            { id: 'obj-d2', code: 'D2', name: 'Criar apresentação (depende do evento A)', tasks: [] },
+            { id: 'obj-d3', code: 'D3', name: 'Logística do evento', tasks: [
+              { id: uid(), text: 'Viagem ida e volta', done: false },
+              { id: uid(), text: 'Quem fica com o Caetano', done: false },
+              { id: uid(), text: 'Estadia', done: false },
+              { id: uid(), text: 'Comidas', done: false },
+            ]},
+          ],
+        },
+        {
+          id: 'evt-e', letter: 'E', name: 'Performance na Junta de Freguesia do Bonfim', date: 'A determinar', note: '',
+          objectives: [
+            { id: 'obj-e1', code: 'E1', name: 'Timeline do evento', tasks: [
+              { id: uid(), text: 'Saber a data (para depois marcar o resto)', done: false },
+            ]},
+          ],
+        },
+        {
+          id: 'evt-f', letter: 'F', name: 'Breaking the Code', date: '17 a 19 de Junho', note: 'Revisitar a meio de Maio',
+          objectives: [],
+        },
+      ],
+    };
+
+    const computeProgress = (data) => {
+      let total = 0, done = 0;
+      data.events.forEach(e => e.objectives.forEach(o => o.tasks.forEach(t => { total++; if (t.done) done++; })));
+      return { total, done, pct: total > 0 ? Math.round((done / total) * 100) : 0 };
+    };
+
+    const eventProgress = (ev) => {
+      let total = 0, done = 0;
+      ev.objectives.forEach(o => o.tasks.forEach(t => { total++; if (t.done) done++; }));
+      return { total, done, pct: total > 0 ? Math.round((done / total) * 100) : 0 };
+    };
+
+    const moveInArray = (arr, idx, direction) => {
+      const newIdx = direction === 'up' ? idx - 1 : idx + 1;
+      if (newIdx < 0 || newIdx >= arr.length) return arr;
+      const copy = [...arr];
+      [copy[idx], copy[newIdx]] = [copy[newIdx], copy[idx]];
+      return copy;
+    };
+
+    const countImportedItems = (imported) => {
+      let events = 0, objectives = 0, tasks = 0, done = 0;
+      if (imported && Array.isArray(imported.events)) {
+        events = imported.events.length;
+        imported.events.forEach(e => {
+          if (Array.isArray(e.objectives)) {
+            objectives += e.objectives.length;
+            e.objectives.forEach(o => {
+              if (Array.isArray(o.tasks)) {
+                tasks += o.tasks.length;
+                o.tasks.forEach(t => { if (t.done) done++; });
+              }
+            });
+          }
+        });
+      }
+      return { events, objectives, tasks, done };
+    };
+
+    /* ═══════════════════════════════════════════ ACTION MENU ═══ */
+    const ActionMenu = ({ items, open, onOpenChange, trigger, size = 16, align = 'right' }) => {
+      const ref = useRef(null);
+
+      useEffect(() => {
+        if (!open) return;
+        const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) onOpenChange(false); };
+        const esc = (e) => { if (e.key === 'Escape') onOpenChange(false); };
+        document.addEventListener('mousedown', handler);
+        document.addEventListener('touchstart', handler);
+        document.addEventListener('keydown', esc);
+        return () => {
+          document.removeEventListener('mousedown', handler);
+          document.removeEventListener('touchstart', handler);
+          document.removeEventListener('keydown', esc);
+        };
+      }, [open, onOpenChange]);
+
+      return (
+        <div ref={ref} style={{ position: 'relative', display: 'inline-flex' }}>
+          <button
+            onClick={(e) => { e.stopPropagation(); onOpenChange(!open); }}
+            aria-label="Mais opções"
+            aria-haspopup="menu"
+            aria-expanded={open}
+            style={{
+              padding: trigger ? '0' : 8,
+              minWidth: trigger ? 'auto' : 36,
+              minHeight: trigger ? 'auto' : 36,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: open ? 'var(--accent)' : 'var(--muted)',
+              background: 'transparent', border: 'none', cursor: 'pointer',
+              borderRadius: 4,
+            }}
+          >
+            {trigger || <DotsIcon size={size} />}
+          </button>
+          {open && (
+            <div role="menu" style={{
+              position: 'absolute', top: '100%',
+              [align]: 0, marginTop: 6,
+              background: 'var(--bg)',
+              border: '1px solid var(--border)',
+              borderRadius: 5,
+              boxShadow: '0 8px 24px rgba(42, 33, 26, 0.15), 0 2px 6px rgba(42, 33, 26, 0.08)',
+              minWidth: 220,
+              maxWidth: 'calc(100vw - 32px)',
+              padding: 4, zIndex: 20,
+            }}>
+              {items.map((item, i) => {
+                if (item.type === 'divider') return <div key={i} style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />;
+                if (item.type === 'label') return (
+                  <div key={i} className="mono" style={{
+                    fontSize: 9, padding: '6px 10px 2px',
+                    color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.14em',
+                  }}>{item.text}</div>
+                );
+                return (
+                  <button key={i} role="menuitem"
+                    onClick={() => { if (!item.disabled) { item.onClick(); onOpenChange(false); } }}
+                    disabled={item.disabled}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                      padding: '10px 10px',
+                      background: 'transparent', border: 'none',
+                      color: item.danger ? 'var(--accent)' : 'var(--ink)',
+                      fontSize: 14, fontFamily: 'Fraunces, serif',
+                      cursor: item.disabled ? 'not-allowed' : 'pointer',
+                      opacity: item.disabled ? 0.35 : 1,
+                      textAlign: 'left', borderRadius: 3,
+                    }}
+                    onMouseDown={(e) => { if (!item.disabled) e.currentTarget.style.background = 'rgba(184, 74, 30, 0.12)'; }}
+                    onMouseUp={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                    onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                    onTouchStart={(e) => { if (!item.disabled) e.currentTarget.style.background = 'rgba(184, 74, 30, 0.12)'; }}
+                    onTouchEnd={(e) => { e.currentTarget.style.background = 'transparent'; }}
+                  >
+                    {item.icon && (
+                      <span style={{ display: 'flex', width: 14, flexShrink: 0, color: item.danger ? 'var(--accent)' : 'var(--muted)' }}>
+                        {item.icon}
+                      </span>
+                    )}
+                    <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    /* ═══════════════════════════════════════════ EDITABLE TEXT ═══ */
+    const EditableText = ({ value, onChange, className = '', style = {}, placeholder = '' }) => {
+      const [editing, setEditing] = useState(false);
+      const [draft, setDraft] = useState(value);
+      const inputRef = useRef(null);
+
+      useEffect(() => { setDraft(value); }, [value]);
+      useEffect(() => {
+        if (editing && inputRef.current) { inputRef.current.focus(); inputRef.current.select(); }
+      }, [editing]);
+
+      const commit = () => {
+        const v = draft.trim();
+        if (v !== value) onChange(v);
+        setEditing(false);
+      };
+      const cancel = () => { setDraft(value); setEditing(false); };
+      const onKey = (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); commit(); }
+        if (e.key === 'Escape') cancel();
+      };
+
+      if (editing) {
+        return (
+          <input ref={inputRef} value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={commit} onKeyDown={onKey}
+            className={className}
+            style={{ ...style, background: 'rgba(184,74,30,0.06)', border: '1px solid var(--accent)', borderRadius: 4, padding: '2px 6px', width: '100%', fontFamily: 'inherit', fontSize: 'inherit', fontWeight: 'inherit', color: 'inherit', lineHeight: 'inherit' }}
+          />
+        );
+      }
+
+      return (
+        <span onClick={() => setEditing(true)}
+          className={className}
+          style={{ ...style, cursor: 'text', borderRadius: 3 }}
+          title="Toca para editar">
+          {value || <span style={{ color: 'var(--muted)', fontStyle: 'italic' }}>{placeholder}</span>}
+        </span>
+      );
+    };
+
+    /* ═══════════════════════════════════════════ TASK ROW ═══ */
+    const TaskRow = ({ task, onToggle, onEdit, onDelete, onMoveUp, onMoveDown, canMoveUp, canMoveDown, otherObjectives, onMoveToObjective }) => {
+      const [menuOpen, setMenuOpen] = useState(false);
+
+      const menuItems = [
+        { label: 'Mover para cima', icon: <ArrowUpIcon size={13} />, onClick: onMoveUp, disabled: !canMoveUp },
+        { label: 'Mover para baixo', icon: <ArrowDownIcon size={13} />, onClick: onMoveDown, disabled: !canMoveDown },
+      ];
+      if (otherObjectives && otherObjectives.length > 0) {
+        menuItems.push({ type: 'divider' });
+        menuItems.push({ type: 'label', text: 'Mover para outro objetivo' });
+        otherObjectives.forEach(o => {
+          menuItems.push({ label: `${o.code} · ${o.name}`, icon: <ArrowRightIcon size={13} />, onClick: () => onMoveToObjective(o.id) });
+        });
+      }
+      menuItems.push({ type: 'divider' });
+      menuItems.push({ label: 'Eliminar tarefa', icon: <TrashIcon size={13} />, onClick: onDelete, danger: true });
+
+      return (
+        <div className="flex items-start gap-2 py-2 px-2 -mx-2 rounded" style={{ minHeight: 44 }}>
+          <button onClick={onToggle}
+            aria-label={task.done ? 'Marcar por fazer' : 'Marcar feito'}
+            style={{
+              marginTop: 2, flexShrink: 0,
+              width: 36, height: 36,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'transparent', border: 'none', cursor: 'pointer', padding: 0,
+            }}
+          >
+            <span style={{
+              width: 20, height: 20, borderRadius: 5,
+              border: `1.5px solid ${task.done ? 'var(--accent)' : 'var(--muted)'}`,
+              background: task.done ? 'var(--accent)' : 'transparent',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'all 150ms ease',
+            }}>
+              {task.done && <CheckIcon size={13} strokeWidth={3} style={{ color: '#F4EEDF' }} />}
+            </span>
+          </button>
+          <div className="flex-1 min-w-0" style={{ paddingTop: 8 }}>
+            <EditableText value={task.text} onChange={onEdit}
+              style={{
+                display: 'block', fontSize: 16, lineHeight: 1.5,
+                color: task.done ? 'var(--muted)' : 'var(--ink)',
+                textDecoration: task.done ? 'line-through' : 'none',
+                textDecorationThickness: 1,
+                fontFamily: 'Fraunces, serif',
+              }}
+            />
+          </div>
+          <div style={{ flexShrink: 0, opacity: 0.5 }}>
+            <ActionMenu items={menuItems} open={menuOpen} onOpenChange={setMenuOpen} size={14} />
+          </div>
+        </div>
+      );
+    };
+
+    /* ═══════════════════════════════════════════ ADD LINE ═══ */
+    const AddLine = ({ onAdd, placeholder = 'nova tarefa' }) => {
+      const [value, setValue] = useState('');
+      const submit = () => { const v = value.trim(); if (v) { onAdd(v); setValue(''); } };
+      return (
+        <div className="flex items-center gap-2 py-2 px-2 -mx-2" style={{ minHeight: 44 }}>
+          <div style={{ width: 36, height: 36, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <PlusIcon size={14} style={{ color: 'var(--muted)' }} />
+          </div>
+          <input value={value}
+            onChange={(e) => setValue(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') submit(); }}
+            onBlur={submit}
+            placeholder={placeholder}
+            style={{
+              flex: 1, background: 'transparent', border: 'none', outline: 'none',
+              padding: '6px 0',
+              fontFamily: 'Fraunces, serif', fontSize: 16,
+              color: 'var(--ink)', fontStyle: 'italic',
+            }}
+          />
+        </div>
+      );
+    };
+
+    /* ═══════════════════════════════════════════ OBJECTIVE BLOCK ═══ */
+    const ObjectiveBlock = ({
+      objective, onRenameObjective, onDeleteObjective, onMoveObjectiveUp, onMoveObjectiveDown,
+      canMoveObjectiveUp, canMoveObjectiveDown, siblingObjectives,
+      onToggleTask, onEditTask, onDeleteTask, onAddTask,
+      onMoveTaskUp, onMoveTaskDown, onMoveTaskToObjective,
+    }) => {
+      const [objMenuOpen, setObjMenuOpen] = useState(false);
+      const total = objective.tasks.length;
+      const done = objective.tasks.filter(t => t.done).length;
+
+      const objMenuItems = [
+        { label: 'Mover objetivo para cima', icon: <ArrowUpIcon size={13} />, onClick: onMoveObjectiveUp, disabled: !canMoveObjectiveUp },
+        { label: 'Mover objetivo para baixo', icon: <ArrowDownIcon size={13} />, onClick: onMoveObjectiveDown, disabled: !canMoveObjectiveDown },
+        { type: 'divider' },
+        { label: 'Eliminar objetivo', icon: <TrashIcon size={13} />, onClick: onDeleteObjective, danger: true },
+      ];
+
+      return (
+        <div className="mb-6">
+          <div className="flex items-baseline gap-3 mb-1 pb-1.5" style={{ borderBottom: '1px dotted var(--border)' }}>
+            <span className="mono" style={{ fontSize: 11, letterSpacing: '0.12em', color: 'var(--accent)', fontWeight: 500, flexShrink: 0 }}>
+              {objective.code}
+            </span>
+            <div className="flex-1 min-w-0">
+              <EditableText value={objective.name} onChange={onRenameObjective}
+                style={{ fontSize: 18, fontFamily: 'Fraunces, serif', fontWeight: 500, color: 'var(--ink)', letterSpacing: '-0.005em' }} />
+            </div>
+            {total > 0 && (
+              <span className="mono" style={{ fontSize: 11, color: 'var(--muted)', flexShrink: 0 }}>
+                {done}/{total}
+              </span>
+            )}
+            <div style={{ flexShrink: 0, opacity: 0.5 }}>
+              <ActionMenu items={objMenuItems} open={objMenuOpen} onOpenChange={setObjMenuOpen} size={14} />
+            </div>
+          </div>
+          <div>
+            {objective.tasks.map((task, i) => (
+              <TaskRow key={task.id} task={task}
+                onToggle={() => onToggleTask(task.id)}
+                onEdit={(text) => onEditTask(task.id, text)}
+                onDelete={() => onDeleteTask(task.id)}
+                onMoveUp={() => onMoveTaskUp(task.id)}
+                onMoveDown={() => onMoveTaskDown(task.id)}
+                canMoveUp={i > 0}
+                canMoveDown={i < objective.tasks.length - 1}
+                otherObjectives={siblingObjectives}
+                onMoveToObjective={(toObjId) => onMoveTaskToObjective(task.id, toObjId)}
+              />
+            ))}
+            <AddLine onAdd={onAddTask} placeholder="adicionar tarefa…" />
+          </div>
+        </div>
+      );
+    };
+
+    const AddObjectiveLine = ({ onAdd, eventLetter, nextIndex }) => {
+      const [value, setValue] = useState('');
+      const submit = () => { const v = value.trim(); if (v) { onAdd(`${eventLetter}${nextIndex}`, v); setValue(''); } };
+      return (
+        <div className="flex items-center gap-3 mt-2" style={{ minHeight: 44 }}>
+          <span className="mono" style={{ fontSize: 11, letterSpacing: '0.12em', color: 'var(--muted)', flexShrink: 0 }}>
+            {eventLetter}{nextIndex}
+          </span>
+          <input value={value}
+            onChange={(e) => setValue(e.target.value)}
+            onKeyDown={(e) => { if (e.key === 'Enter') submit(); }}
+            onBlur={submit}
+            placeholder="+ novo objetivo"
+            style={{
+              flex: 1, background: 'transparent', border: 'none', outline: 'none',
+              padding: '8px 0', borderBottom: '1px dotted var(--border)',
+              fontFamily: 'Fraunces, serif', fontStyle: 'italic', fontSize: 16,
+              color: 'var(--ink)',
+            }}
+          />
+        </div>
+      );
+    };
+
+    /* ═══════════════════════════════════════════ EVENT CARD ═══ */
+    const EventCard = ({
+      event, index, onUpdate, onDelete, onAddObjective,
+      onToggleTask, onEditTask, onDeleteTask, onAddTask,
+      onRenameObjective, onDeleteObjective,
+      onMoveObjective, onMoveTask, onMoveTaskToObjective,
+    }) => {
+      const [confirmDelete, setConfirmDelete] = useState(false);
+      const { pct, done, total } = eventProgress(event);
+
+      return (
+        <article className="relative mb-14">
+          <div aria-hidden className="hidden md:block select-none"
+            style={{
+              position: 'absolute', left: -80, top: -8,
+              fontFamily: 'Fraunces, serif', fontSize: 56, fontWeight: 300,
+              color: 'var(--border)', letterSpacing: '-0.02em', fontStyle: 'italic', lineHeight: 1,
+            }}>
+            {toRoman(index + 1)}
+          </div>
+
+          <header className="mb-5">
+            <div className="flex items-start gap-3 flex-wrap">
+              <span className="mono" style={{ fontSize: 12, letterSpacing: '0.14em', color: 'var(--accent)', fontWeight: 600, marginTop: 8 }}>
+                {event.letter}
+              </span>
+              <div className="flex-1 min-w-0">
+                <h2 style={{ fontSize: 28, fontFamily: 'Fraunces, serif', fontWeight: 500, color: 'var(--ink)', letterSpacing: '-0.02em', lineHeight: 1.15, marginBottom: 6 }}>
+                  <EditableText value={event.name} onChange={(v) => onUpdate({ name: v })} />
+                </h2>
+                <div className="flex items-center gap-3 flex-wrap">
+                  <span className="mono" style={{ fontSize: 12, letterSpacing: '0.08em', color: 'var(--muted)', textTransform: 'uppercase' }}>
+                    <EditableText value={event.date} onChange={(v) => onUpdate({ date: v })} placeholder="data" />
+                  </span>
+                  {event.note ? (
+                    <span style={{ fontSize: 13, fontStyle: 'italic', color: 'var(--muted)', fontFamily: 'Fraunces, serif' }}>
+                      · <EditableText value={event.note} onChange={(v) => onUpdate({ note: v })} />
+                    </span>
+                  ) : (
+                    <button onClick={() => onUpdate({ note: 'nota…' })} className="mono"
+                      style={{ fontSize: 11, color: 'var(--muted)', cursor: 'pointer', textDecoration: 'underline dotted', background: 'transparent', border: 'none', padding: '4px 0' }}>
+                      + nota
+                    </button>
+                  )}
+                </div>
+              </div>
+              <button onClick={() => confirmDelete ? onDelete() : setConfirmDelete(true)}
+                onBlur={() => setConfirmDelete(false)}
+                className="mono"
+                style={{
+                  padding: '6px 10px', fontSize: 10, letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                  color: confirmDelete ? 'var(--accent)' : 'var(--muted)',
+                  cursor: 'pointer', marginTop: 6,
+                  border: `1px solid ${confirmDelete ? 'var(--accent)' : 'var(--border)'}`,
+                  borderRadius: 3, background: 'transparent', flexShrink: 0,
+                  minHeight: 32,
+                }}>
+                {confirmDelete ? 'confirmar?' : 'eliminar'}
+              </button>
+            </div>
+
+            {total > 0 && (
+              <div className="mt-4 flex items-center gap-3">
+                <div style={{ flex: 1, height: 2, background: 'var(--border)', position: 'relative', borderRadius: 1 }}>
+                  <div style={{
+                    position: 'absolute', left: 0, top: 0, height: '100%',
+                    width: `${pct}%`, background: 'var(--accent)',
+                    transition: 'width 400ms ease', borderRadius: 1,
+                  }} />
+                </div>
+                <span className="mono" style={{ fontSize: 10, color: 'var(--muted)', letterSpacing: '0.08em', flexShrink: 0 }}>
+                  {done} de {total}
+                </span>
+              </div>
+            )}
+          </header>
+
+          <div>
+            {event.objectives.map((obj, objIdx) => {
+              const siblings = event.objectives.filter(o => o.id !== obj.id).map(o => ({ id: o.id, code: o.code, name: o.name }));
+              return (
+                <ObjectiveBlock key={obj.id} objective={obj}
+                  onRenameObjective={(name) => onRenameObjective(obj.id, name)}
+                  onDeleteObjective={() => onDeleteObjective(obj.id)}
+                  onMoveObjectiveUp={() => onMoveObjective(obj.id, 'up')}
+                  onMoveObjectiveDown={() => onMoveObjective(obj.id, 'down')}
+                  canMoveObjectiveUp={objIdx > 0}
+                  canMoveObjectiveDown={objIdx < event.objectives.length - 1}
+                  siblingObjectives={siblings}
+                  onToggleTask={(taskId) => onToggleTask(obj.id, taskId)}
+                  onEditTask={(taskId, text) => onEditTask(obj.id, taskId, text)}
+                  onDeleteTask={(taskId) => onDeleteTask(obj.id, taskId)}
+                  onAddTask={(text) => onAddTask(obj.id, text)}
+                  onMoveTaskUp={(taskId) => onMoveTask(obj.id, taskId, 'up')}
+                  onMoveTaskDown={(taskId) => onMoveTask(obj.id, taskId, 'down')}
+                  onMoveTaskToObjective={(taskId, toObjId) => onMoveTaskToObjective(obj.id, taskId, toObjId)}
+                />
+              );
+            })}
+            <AddObjectiveLine onAdd={onAddObjective} eventLetter={event.letter} nextIndex={event.objectives.length + 1} />
+          </div>
+        </article>
+      );
+    };
+
+    /* ═══════════════════════════════════════════ MAIN ═══ */
+    const Atlas = () => {
+      const [data, setData] = useState(null);
+      const [loaded, setLoaded] = useState(false);
+      const [resetOpen, setResetOpen] = useState(false);
+      const [hideCompleted, setHideCompleted] = useState(false);
+      const [backupMenuOpen, setBackupMenuOpen] = useState(false);
+      const [importPreview, setImportPreview] = useState(null); // { data, counts }
+
+      /* Load on mount */
+      useEffect(() => {
+        try {
+          const stored = localStorage.getItem(STORAGE_KEY);
+          if (stored) {
+            setData(JSON.parse(stored));
+          } else {
+            setData(INITIAL_DATA);
+          }
+        } catch (e) {
+          setData(INITIAL_DATA);
+        }
+        setLoaded(true);
+      }, []);
+
+      /* Save on change */
+      useEffect(() => {
+        if (!loaded || !data) return;
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        } catch (e) {
+          console.error('Save failed:', e);
+        }
+      }, [data, loaded]);
+
+      /* handlers */
+      const updateEvent = (id, patch) => setData(d => ({ ...d, events: d.events.map(e => e.id === id ? { ...e, ...patch } : e) }));
+      const deleteEvent = (id) => setData(d => ({ ...d, events: d.events.filter(e => e.id !== id) }));
+      const addEvent = () => setData(d => {
+        const nextLetter = String.fromCharCode(65 + d.events.length);
+        return { ...d, events: [...d.events, { id: uid(), letter: nextLetter, name: 'Novo evento', date: 'A definir', note: '', objectives: [] }] };
+      });
+
+      const addObjective = (eventId, code, name) => setData(d => ({
+        ...d, events: d.events.map(e => e.id !== eventId ? e : { ...e, objectives: [...e.objectives, { id: uid(), code, name, tasks: [] }] }),
+      }));
+      const renameObjective = (eventId, objId, name) => setData(d => ({
+        ...d, events: d.events.map(e => e.id !== eventId ? e : { ...e, objectives: e.objectives.map(o => o.id === objId ? { ...o, name } : o) }),
+      }));
+      const deleteObjective = (eventId, objId) => setData(d => ({
+        ...d, events: d.events.map(e => e.id !== eventId ? e : { ...e, objectives: e.objectives.filter(o => o.id !== objId) }),
+      }));
+
+      const addTask = (eventId, objId, text) => setData(d => ({
+        ...d, events: d.events.map(e => e.id !== eventId ? e : {
+          ...e, objectives: e.objectives.map(o => o.id !== objId ? o : { ...o, tasks: [...o.tasks, { id: uid(), text, done: false }] }),
+        }),
+      }));
+      const toggleTask = (eventId, objId, taskId) => setData(d => ({
+        ...d, events: d.events.map(e => e.id !== eventId ? e : {
+          ...e, objectives: e.objectives.map(o => o.id !== objId ? o : { ...o, tasks: o.tasks.map(t => t.id === taskId ? { ...t, done: !t.done } : t) }),
+        }),
+      }));
+      const editTask = (eventId, objId, taskId, text) => setData(d => ({
+        ...d, events: d.events.map(e => e.id !== eventId ? e : {
+          ...e, objectives: e.objectives.map(o => o.id !== objId ? o : { ...o, tasks: o.tasks.map(t => t.id === taskId ? { ...t, text } : t) }),
+        }),
+      }));
+      const deleteTask = (eventId, objId, taskId) => setData(d => ({
+        ...d, events: d.events.map(e => e.id !== eventId ? e : {
+          ...e, objectives: e.objectives.map(o => o.id !== objId ? o : { ...o, tasks: o.tasks.filter(t => t.id !== taskId) }),
+        }),
+      }));
+
+      const moveTask = (eventId, objId, taskId, direction) => setData(d => ({
+        ...d, events: d.events.map(e => e.id !== eventId ? e : {
+          ...e, objectives: e.objectives.map(o => {
+            if (o.id !== objId) return o;
+            const idx = o.tasks.findIndex(t => t.id === taskId);
+            if (idx === -1) return o;
+            return { ...o, tasks: moveInArray(o.tasks, idx, direction) };
+          }),
+        }),
+      }));
+
+      const moveTaskToObjective = (eventId, fromObjId, taskId, toObjId) => setData(d => ({
+        ...d, events: d.events.map(e => {
+          if (e.id !== eventId) return e;
+          const fromObj = e.objectives.find(o => o.id === fromObjId);
+          const task = fromObj && fromObj.tasks.find(t => t.id === taskId);
+          if (!task) return e;
+          return { ...e, objectives: e.objectives.map(o => {
+            if (o.id === fromObjId) return { ...o, tasks: o.tasks.filter(t => t.id !== taskId) };
+            if (o.id === toObjId) return { ...o, tasks: [...o.tasks, task] };
+            return o;
+          }) };
+        }),
+      }));
+
+      const moveObjective = (eventId, objId, direction) => setData(d => ({
+        ...d, events: d.events.map(e => {
+          if (e.id !== eventId) return e;
+          const idx = e.objectives.findIndex(o => o.id === objId);
+          if (idx === -1) return e;
+          return { ...e, objectives: moveInArray(e.objectives, idx, direction) };
+        }),
+      }));
+
+      const resetAll = () => {
+        const fresh = JSON.parse(JSON.stringify(INITIAL_DATA));
+        fresh.events.forEach(e => {
+          e.id = uid();
+          e.objectives.forEach(o => {
+            o.id = uid();
+            o.tasks.forEach(t => { t.id = uid(); });
+          });
+        });
+        setData(fresh);
+        setResetOpen(false);
+      };
+
+      /* Export / Import */
+      const exportData = () => {
+        try {
+          const json = JSON.stringify(data, null, 2);
+          const blob = new Blob([json], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          const date = new Date().toISOString().slice(0, 10);
+          a.download = `atlas-backup-${date}.json`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          setTimeout(() => URL.revokeObjectURL(url), 1000);
+        } catch (e) {
+          alert('Erro ao guardar cópia: ' + e.message);
+        }
+      };
+
+      const importData = () => {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'application/json,.json';
+        input.onchange = (e) => {
+          const file = e.target.files && e.target.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = (evt) => {
+            try {
+              const imported = JSON.parse(evt.target.result);
+              if (!imported || !Array.isArray(imported.events)) {
+                alert('Ficheiro inválido — não parece ser uma cópia do ATLAS.');
+                return;
+              }
+              setImportPreview({ data: imported, counts: countImportedItems(imported) });
+            } catch (err) {
+              alert('Erro a ler o ficheiro. Certifica-te que é um JSON válido.');
+            }
+          };
+          reader.readAsText(file);
+        };
+        input.click();
+      };
+
+      const confirmImport = () => {
+        if (!importPreview) return;
+        setData(importPreview.data);
+        setImportPreview(null);
+      };
+
+      if (!loaded || !data) {
+        return (
+          <div className="atlas-root" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+            <span className="mono" style={{ color: 'var(--muted)', fontSize: 12, letterSpacing: '0.2em' }}>A CARREGAR…</span>
+          </div>
+        );
+      }
+
+      const progress = computeProgress(data);
+      const visibleEvents = hideCompleted
+        ? data.events.map(e => ({ ...e, objectives: e.objectives.map(o => ({ ...o, tasks: o.tasks.filter(t => !t.done) })) }))
+        : data.events;
+
+      const backupMenuItems = [
+        { label: 'Guardar cópia (download)', icon: <DownloadIcon size={13} />, onClick: exportData },
+        { label: 'Carregar cópia (upload)', icon: <UploadIcon size={13} />, onClick: importData },
+      ];
+
+      return (
+        <div>
+          <div className="mx-auto px-5 md:px-12 py-10 md:py-20" style={{ maxWidth: 860, position: 'relative' }}>
+
+            {/* Utility bar */}
+            <div className="flex items-center justify-between gap-3 flex-wrap mb-14">
+              <span className="mono" style={{ fontSize: 10, letterSpacing: '0.18em', color: 'var(--muted)', textTransform: 'uppercase' }}>
+                Manual · {new Date().getFullYear()}
+              </span>
+              <div className="flex items-center gap-1 flex-wrap">
+                <button onClick={() => setHideCompleted(v => !v)} className="mono"
+                  style={{
+                    fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase',
+                    color: hideCompleted ? 'var(--accent)' : 'var(--muted)',
+                    cursor: 'pointer', background: 'transparent', border: 'none',
+                    padding: '8px 10px', minHeight: 36,
+                  }}>
+                  {hideCompleted ? '● esconder' : '○ esconder'}
+                </button>
+                <ActionMenu
+                  items={backupMenuItems}
+                  open={backupMenuOpen}
+                  onOpenChange={setBackupMenuOpen}
+                  trigger={
+                    <span className="mono" style={{
+                      fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase',
+                      color: backupMenuOpen ? 'var(--accent)' : 'var(--muted)',
+                      padding: '8px 10px', minHeight: 36, display: 'inline-flex', alignItems: 'center',
+                    }}>
+                      cópia
+                    </span>
+                  }
+                />
+                <button onClick={() => setResetOpen(true)} className="mono"
+                  title="Restaurar dados originais"
+                  style={{
+                    fontSize: 10, letterSpacing: '0.12em', textTransform: 'uppercase',
+                    color: 'var(--muted)', cursor: 'pointer', background: 'transparent', border: 'none',
+                    padding: '8px 10px', minHeight: 36, display: 'inline-flex', alignItems: 'center', gap: 4,
+                  }}>
+                  <RotateIcon size={11} />
+                  <span>reset</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Masthead */}
+            <header className="mb-20">
+              <h1 style={{
+                fontFamily: 'Fraunces, serif',
+                fontSize: 'clamp(72px, 22vw, 180px)',
+                fontWeight: 400, lineHeight: 0.85, letterSpacing: '-0.04em',
+                color: 'var(--ink)', marginBottom: 14,
+              }}>
+                <EditableText value={data.title} onChange={(v) => setData(d => ({ ...d, title: v }))} />
+              </h1>
+              <p style={{
+                fontFamily: 'Fraunces, serif', fontStyle: 'italic',
+                fontSize: 20, color: 'var(--muted)',
+                marginBottom: 32, fontWeight: 300,
+              }}>
+                <EditableText value={data.subtitle} onChange={(v) => setData(d => ({ ...d, subtitle: v }))} />
+              </p>
+
+              <div style={{ borderTop: '1px solid var(--border)', borderBottom: '1px solid var(--border)', padding: '14px 0', marginBottom: 28 }}>
+                <div className="mono" style={{ fontSize: 10, letterSpacing: '0.18em', color: 'var(--accent)', textTransform: 'uppercase', marginBottom: 8 }}>
+                  Duas atividades
+                </div>
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0 }}>
+                  {data.activities.map((a, i) => (
+                    <li key={i} style={{ fontSize: 15, color: 'var(--ink)', marginBottom: 6, display: 'flex', gap: 12, lineHeight: 1.4 }}>
+                      <span className="mono" style={{ color: 'var(--muted)', fontSize: 11, marginTop: 3, flexShrink: 0 }}>{String(i + 1).padStart(2, '0')}</span>
+                      <EditableText value={a} onChange={(v) => setData(d => ({ ...d, activities: d.activities.map((x, j) => j === i ? v : x) }))} />
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div>
+                <div className="flex items-baseline justify-between mb-2">
+                  <span className="mono" style={{ fontSize: 10, letterSpacing: '0.18em', color: 'var(--muted)', textTransform: 'uppercase' }}>
+                    Progresso total
+                  </span>
+                  <span className="mono" style={{ fontSize: 11, color: 'var(--ink)', fontWeight: 500 }}>
+                    {progress.done} / {progress.total} · {progress.pct}%
+                  </span>
+                </div>
+                <div style={{ height: 3, background: 'var(--border)', position: 'relative', borderRadius: 1.5 }}>
+                  <div style={{
+                    position: 'absolute', left: 0, top: 0, height: '100%',
+                    width: `${progress.pct}%`, background: 'var(--accent)',
+                    transition: 'width 500ms ease', borderRadius: 1.5,
+                  }} />
+                </div>
+              </div>
+            </header>
+
+            {/* Events */}
+            <main>
+              {visibleEvents.map((ev, i) => (
+                <EventCard key={ev.id} event={ev} index={i}
+                  onUpdate={(patch) => updateEvent(ev.id, patch)}
+                  onDelete={() => deleteEvent(ev.id)}
+                  onAddObjective={(code, name) => addObjective(ev.id, code, name)}
+                  onRenameObjective={(objId, name) => renameObjective(ev.id, objId, name)}
+                  onDeleteObjective={(objId) => deleteObjective(ev.id, objId)}
+                  onAddTask={(objId, text) => addTask(ev.id, objId, text)}
+                  onToggleTask={(objId, taskId) => toggleTask(ev.id, objId, taskId)}
+                  onEditTask={(objId, taskId, text) => editTask(ev.id, objId, taskId, text)}
+                  onDeleteTask={(objId, taskId) => deleteTask(ev.id, objId, taskId)}
+                  onMoveObjective={(objId, dir) => moveObjective(ev.id, objId, dir)}
+                  onMoveTask={(objId, taskId, dir) => moveTask(ev.id, objId, taskId, dir)}
+                  onMoveTaskToObjective={(fromObjId, taskId, toObjId) => moveTaskToObjective(ev.id, fromObjId, taskId, toObjId)}
+                />
+              ))}
+
+              <button onClick={addEvent} className="mono"
+                style={{
+                  display: 'block', width: '100%', padding: 20, marginTop: 20,
+                  fontSize: 11, letterSpacing: '0.18em', textTransform: 'uppercase',
+                  color: 'var(--muted)', background: 'transparent',
+                  border: '1px dashed var(--border)', borderRadius: 4, cursor: 'pointer',
+                }}>
+                + adicionar novo evento
+              </button>
+            </main>
+
+            <footer style={{ marginTop: 80, paddingTop: 20, borderTop: '1px solid var(--border)', textAlign: 'center' }}>
+              <p className="mono" style={{ fontSize: 10, letterSpacing: '0.18em', color: 'var(--muted)', textTransform: 'uppercase', lineHeight: 1.6 }}>
+                Os teus dados estão guardados neste telemóvel.<br />
+                Usa <span style={{ color: 'var(--accent)' }}>cópia</span> para guardar ou carregar backups.
+              </p>
+            </footer>
+          </div>
+
+          {/* Reset modal */}
+          {resetOpen && (
+            <div onClick={() => setResetOpen(false)}
+              style={{ position: 'fixed', inset: 0, background: 'rgba(42,33,26,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: 24 }}>
+              <div onClick={(e) => e.stopPropagation()}
+                style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 6, padding: 28, maxWidth: 440, width: '100%' }}>
+                <h3 style={{ fontFamily: 'Fraunces, serif', fontSize: 22, fontWeight: 500, color: 'var(--ink)', marginBottom: 10, letterSpacing: '-0.01em' }}>
+                  Restaurar tudo?
+                </h3>
+                <p style={{ fontFamily: 'Fraunces, serif', fontSize: 15, color: 'var(--muted)', lineHeight: 1.5, marginBottom: 20 }}>
+                  Vais perder todas as alterações que fizeste e voltar ao plano original. Isto não pode ser desfeito. Se quiseres manter o que tens, guarda uma cópia primeiro.
+                </p>
+                <div className="flex gap-3 justify-end flex-wrap">
+                  <button onClick={() => setResetOpen(false)} className="mono"
+                    style={{ padding: '10px 16px', fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', background: 'transparent', border: '1px solid var(--border)', borderRadius: 3, color: 'var(--ink)', cursor: 'pointer', minHeight: 40 }}>
+                    Cancelar
+                  </button>
+                  <button onClick={resetAll} className="mono"
+                    style={{ padding: '10px 16px', fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', background: 'var(--accent)', border: '1px solid var(--accent)', borderRadius: 3, color: 'var(--bg)', cursor: 'pointer', minHeight: 40 }}>
+                    Sim, restaurar
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Import confirm modal */}
+          {importPreview && (
+            <div onClick={() => setImportPreview(null)}
+              style={{ position: 'fixed', inset: 0, background: 'rgba(42,33,26,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: 24 }}>
+              <div onClick={(e) => e.stopPropagation()}
+                style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 6, padding: 28, maxWidth: 460, width: '100%' }}>
+                <h3 style={{ fontFamily: 'Fraunces, serif', fontSize: 22, fontWeight: 500, color: 'var(--ink)', marginBottom: 10, letterSpacing: '-0.01em' }}>
+                  Carregar esta cópia?
+                </h3>
+                <p style={{ fontFamily: 'Fraunces, serif', fontSize: 15, color: 'var(--muted)', lineHeight: 1.5, marginBottom: 12 }}>
+                  Este ficheiro contém:
+                </p>
+                <ul style={{ listStyle: 'none', padding: 0, margin: 0, marginBottom: 20 }}>
+                  <li className="mono" style={{ fontSize: 12, color: 'var(--ink)', padding: '4px 0' }}>· {importPreview.counts.events} eventos</li>
+                  <li className="mono" style={{ fontSize: 12, color: 'var(--ink)', padding: '4px 0' }}>· {importPreview.counts.objectives} objetivos</li>
+                  <li className="mono" style={{ fontSize: 12, color: 'var(--ink)', padding: '4px 0' }}>· {importPreview.counts.tasks} tarefas ({importPreview.counts.done} feitas)</li>
+                </ul>
+                <p style={{ fontFamily: 'Fraunces, serif', fontSize: 13, fontStyle: 'italic', color: 'var(--muted)', lineHeight: 1.5, marginBottom: 20 }}>
+                  Os teus dados atuais vão ser substituídos. Isto não pode ser desfeito.
+                </p>
+                <div className="flex gap-3 justify-end flex-wrap">
+                  <button onClick={() => setImportPreview(null)} className="mono"
+                    style={{ padding: '10px 16px', fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', background: 'transparent', border: '1px solid var(--border)', borderRadius: 3, color: 'var(--ink)', cursor: 'pointer', minHeight: 40 }}>
+                    Cancelar
+                  </button>
+                  <button onClick={confirmImport} className="mono"
+                    style={{ padding: '10px 16px', fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', background: 'var(--accent)', border: '1px solid var(--accent)', borderRadius: 3, color: 'var(--bg)', cursor: 'pointer', minHeight: 40 }}>
+                    Sim, carregar
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<Atlas />);
+  </script>
+</body>
+</html>
